@@ -42,6 +42,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
     _controller.clear();
   }
 
+  void _toggleDone(int index, bool? value) {
+    setState(() {
+      _tasks[index].isDone = value ?? false;
+    });
+  }
+
+  void _deleteTask(int index) {
+    setState(() {
+      _tasks.removeAt(index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,8 +86,26 @@ class _TaskListScreenState extends State<TaskListScreen> {
                       itemCount: _tasks.length,
                       itemBuilder: (context, index) {
                         final task = _tasks[index];
-                        return ListTile(
-                          title: Text(task.name),
+                        return Card(
+                          child: ListTile(
+                            leading: Checkbox(
+                              value: task.isDone,
+                              onChanged: (v) => _toggleDone(index, v),
+                            ),
+                            title: Text(
+                              task.name,
+                              style: TextStyle(
+                                decoration: task.isDone
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => _deleteTask(index),
+                              tooltip: 'Delete',
+                            ),
+                          ),
                         );
                       },
                     ),
