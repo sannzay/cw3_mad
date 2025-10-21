@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const TaskApp());
@@ -23,7 +25,22 @@ class Task {
   String name;
   bool isDone;
   Priority priority;
+
   Task({required this.name, this.isDone = false, this.priority = Priority.medium});
+
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        'isDone': isDone,
+        'priority': priority.name,
+      };
+  factory Task.fromMap(Map<String, dynamic> map) => Task(
+        name: map['name'] as String,
+        isDone: (map['isDone'] as bool?) ?? false,
+        priority: Priority.values.firstWhere(
+          (p) => p.name == (map['priority'] as String? ?? 'medium'),
+          orElse: () => Priority.medium,
+        ),
+      );
 }
 
 class TaskApp extends StatelessWidget {
@@ -50,6 +67,35 @@ class _TaskListScreenState extends State<TaskListScreen> {
   final List<Task> _tasks = [];
   Priority _selectedPriority = Priority.medium;
 
+  static const _prefsKeyTasks = 'tasks_json_list';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = prefs.getStringList(_prefsKeyTasks) ?? [];
+    final loaded = jsonList
+        .map((s) => jsonDecode(s) as Map<String, dynamic>)
+        .map(Task.fromMap)
+        .toList();
+    setState(() {
+      _tasks
+        ..clear()
+        ..addAll(loaded);
+      _sortTasks();
+    });
+  }
+
+  Future<void> _saveTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = _tasks.map((t) => jsonEncode(t.toMap())).toList();
+    await prefs.setStringList(_prefsKeyTasks, jsonList);
+  }
+
   void _addTask() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
@@ -58,18 +104,21 @@ class _TaskListScreenState extends State<TaskListScreen> {
       _sortTasks();
     });
     _controller.clear();
+    _saveTasks();
   }
 
   void _toggleDone(int index, bool? value) {
     setState(() {
       _tasks[index].isDone = value ?? false;
     });
+    _saveTasks();
   }
 
   void _deleteTask(int index) {
     setState(() {
       _tasks.removeAt(index);
     });
+    _saveTasks();
   }
 
   void _changePriority(int index, Priority newPriority) {
@@ -77,6 +126,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       _tasks[index].priority = newPriority;
       _sortTasks();
     });
+    _saveTasks();
   }
 
   void _sortTasks() {
