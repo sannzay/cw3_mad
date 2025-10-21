@@ -12,7 +12,6 @@ extension PriorityX on Priority {
         Priority.medium => 'Medium',
         Priority.high => 'High',
       };
-  // Higher number = higher priority weight for sorting
   int get weight => switch (this) {
         Priority.low => 0,
         Priority.medium => 1,
@@ -70,6 +69,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
   void _deleteTask(int index) {
     setState(() {
       _tasks.removeAt(index);
+    });
+  }
+
+  void _changePriority(int index, Priority newPriority) {
+    setState(() {
+      _tasks[index].priority = newPriority;
+      _sortTasks();
     });
   }
 
@@ -134,9 +140,25 @@ class _TaskListScreenState extends State<TaskListScreen> {
                               ),
                             ),
                             subtitle: Text('Priority: ${task.priority.label}'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              onPressed: () => _deleteTask(index),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                DropdownButton<Priority>(
+                                  value: task.priority,
+                                  onChanged: (p) {
+                                    if (p != null) _changePriority(index, p);
+                                  },
+                                  items: const [
+                                    DropdownMenuItem(value: Priority.low, child: Text('Low')),
+                                    DropdownMenuItem(value: Priority.medium, child: Text('Medium')),
+                                    DropdownMenuItem(value: Priority.high, child: Text('High')),
+                                  ],
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () => _deleteTask(index),
+                                ),
+                              ],
                             ),
                           ),
                         );
