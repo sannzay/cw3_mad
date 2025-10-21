@@ -43,20 +43,60 @@ class Task {
       );
 }
 
-class TaskApp extends StatelessWidget {
+class TaskApp extends StatefulWidget {
   const TaskApp({super.key});
+  @override
+  State<TaskApp> createState() => _TaskAppState();
+}
+
+class _TaskAppState extends State<TaskApp> {
+  ThemeMode _mode = ThemeMode.system;
+  static const _prefsKeyTheme = 'theme_mode';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modeStr = prefs.getString(_prefsKeyTheme);
+    setState(() {
+      _mode = switch (modeStr) {
+        'dark' => ThemeMode.dark,
+        'light' => ThemeMode.light,
+        _ => ThemeMode.system,
+      };
+    });
+  }
+
+  Future<void> _setTheme(ThemeMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKeyTheme, switch (mode) {
+      ThemeMode.dark => 'dark',
+      ThemeMode.light => 'light',
+      ThemeMode.system => 'system',
+    });
+    setState(() => _mode = mode);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Task Manager',
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
-      home: const TaskListScreen(),
+      themeMode: _mode,
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo, brightness: Brightness.light),
+      darkTheme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo, brightness: Brightness.dark),
+      home: TaskListScreen(onThemeChanged: _setTheme, currentMode: _mode),
     );
   }
 }
 
 class TaskListScreen extends StatefulWidget {
-  const TaskListScreen({super.key});
+  final ValueChanged<ThemeMode> onThemeChanged;
+  final ThemeMode currentMode;
+  const TaskListScreen({super.key, required this.onThemeChanged, required this.currentMode});
 
   @override
   State<TaskListScreen> createState() => _TaskListScreenState();
@@ -136,7 +176,22 @@ class _TaskListScreenState extends State<TaskListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Task Manager')),
+      appBar: AppBar(
+        title: const Text('Task Manager'),
+        actions: [
+          PopupMenuButton<ThemeMode>(
+            initialValue: widget.currentMode,
+            onSelected: widget.onThemeChanged,
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: ThemeMode.light, child: Text('Light')),
+              PopupMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+              PopupMenuItem(value: ThemeMode.system, child: Text('System')),
+            ],
+            icon: const Icon(Icons.brightness_6_outlined),
+            tooltip: 'Theme',
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
