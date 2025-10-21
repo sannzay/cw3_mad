@@ -4,10 +4,27 @@ void main() {
   runApp(const TaskApp());
 }
 
+enum Priority { low, medium, high }
+
+extension PriorityX on Priority {
+  String get label => switch (this) {
+        Priority.low => 'Low',
+        Priority.medium => 'Medium',
+        Priority.high => 'High',
+      };
+  // Higher number = higher priority weight for sorting
+  int get weight => switch (this) {
+        Priority.low => 0,
+        Priority.medium => 1,
+        Priority.high => 2,
+      };
+}
+
 class Task {
   String name;
   bool isDone;
-  Task({required this.name, this.isDone = false});
+  Priority priority;
+  Task({required this.name, this.isDone = false, this.priority = Priority.medium});
 }
 
 class TaskApp extends StatelessWidget {
@@ -32,12 +49,14 @@ class TaskListScreen extends StatefulWidget {
 class _TaskListScreenState extends State<TaskListScreen> {
   final TextEditingController _controller = TextEditingController();
   final List<Task> _tasks = [];
+  Priority _selectedPriority = Priority.medium;
 
   void _addTask() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     setState(() {
-      _tasks.add(Task(name: text));
+      _tasks.add(Task(name: text, priority: _selectedPriority));
+      _sortTasks();
     });
     _controller.clear();
   }
@@ -52,6 +71,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
     setState(() {
       _tasks.removeAt(index);
     });
+  }
+
+  void _sortTasks() {
+    _tasks.sort((a, b) => b.priority.weight.compareTo(a.priority.weight));
   }
 
   @override
@@ -73,6 +96,16 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     ),
                     onSubmitted: (_) => _addTask(),
                   ),
+                ),
+                const SizedBox(width: 12),
+                DropdownButton<Priority>(
+                  value: _selectedPriority,
+                  onChanged: (p) => setState(() => _selectedPriority = p ?? Priority.medium),
+                  items: const [
+                    DropdownMenuItem(value: Priority.low, child: Text('Low')),
+                    DropdownMenuItem(value: Priority.medium, child: Text('Medium')),
+                    DropdownMenuItem(value: Priority.high, child: Text('High')),
+                  ],
                 ),
                 const SizedBox(width: 12),
                 FilledButton(onPressed: _addTask, child: const Text('Add')),
@@ -100,10 +133,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
                                     : TextDecoration.none,
                               ),
                             ),
+                            subtitle: Text('Priority: ${task.priority.label}'),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete_outline),
                               onPressed: () => _deleteTask(index),
-                              tooltip: 'Delete',
                             ),
                           ),
                         );
@@ -112,6 +145,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => setState(_sortTasks),
+        label: const Text('Sort by priority'),
+        icon: const Icon(Icons.sort),
       ),
     );
   }
